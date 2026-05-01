@@ -1,0 +1,21 @@
+package com.zos.auth.dto;
+
+import com.zos.auth.proto.LoginReply;
+import com.zos.auth.proto.LoginRequest;
+
+
+public LoginResponseDto login(LoginRequestDto dto) {
+    LoginRequest grpcRequest = LoginRequest.newBuilder()
+        .setUsername(dto.getUsername())
+        .setPassword(dto.getPassword())
+        .build();
+
+    LoginReply reply = authStub.login(grpcRequest);
+
+    LoginResponseDto response = new LoginResponseDto();
+    response.setSuccess(reply.getSuccess());
+    response.setToken(reply.getToken());
+    response.setErrorMessage(reply.getErrorMessage());
+
+    return response;
+}

@@ -1,0 +1,21 @@
+package com.zos.auth;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import com.zos.auth.service.LocalPasetoService;
+
+public class LocalPasetoServiceTest {
+
+    @Test
+    void testPasetoSigning() throws Exception {
+        String key = "707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f";
+        String payload = "{\"data\":\"this is a secret message\",\"exp\":\"2022-01-01T00:00:00+00:00\"}";
+        String footer = "";
+        String implicitAssertion = "";
+        LocalPasetoService pasetoService = new LocalPasetoService(key, payload, footer, implicitAssertion);
+        pasetoService.setSignedToken();
+
+        System.out.println("Signed Token: " + pasetoService.signedToken);
+    }
+}

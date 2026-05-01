@@ -1,0 +1,39 @@
+package com.auth0.example;
+
+import com.auth0.AuthenticationController;
+import com.auth0.jwk.JwkProvider;
+import com.auth0.jwk.JwkProviderBuilder;
+
+import javax.servlet.ServletConfig;
+import java.io.UnsupportedEncodingException;
+
+/**
+ * Manages a singleton instance of AuthenticationController for the application.
+ */
+public class AuthenticationControllerProvider {
+
+    private AuthenticationControllerProvider() {}
+
+    private static AuthenticationController INSTANCE;
+
+    public static synchronized AuthenticationController getInstance(ServletConfig config)
+            throws UnsupportedEncodingException {
+        if (INSTANCE == null) {
+            String domain = config.getServletContext().getInitParameter("com.auth0.domain");
+            String clientId = config.getServletContext().getInitParameter("com.auth0.clientId");
+            String clientSecret = config.getServletContext().getInitParameter("com.auth0.clientSecret");
+
+            if (domain == null || clientId == null || clientSecret == null) {
+                throw new IllegalArgumentException(
+                    "Missing domain, clientId, or clientSecret. Check your web.xml configuration.");
+            }
+
+            // JwkProvider required for RS256 tokens
+            JwkProvider jwkProvider = new JwkProviderBuilder(domain).build();
+            INSTANCE = AuthenticationController.newBuilder(domain, clientId, clientSecret)
+                    .withJwkProvider(jwkProvider)
+                    .build();
+        }
+        return INSTANCE;
+    }
+}

@@ -1,0 +1,109 @@
+package com.zos.auth.service;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
+import com.zos.auth.proto.CreateUserReply;
+import com.zos.auth.proto.CreateUserRequest;
+import com.zos.auth.proto.LoginReply;
+import com.zos.auth.proto.LoginRequest;
+import com.zos.auth.proto.UserServiceGrpc;
+import com.zos.auth.service.GrpcUserService;
+
+public class AuthService {
+    private final GrpcUserService grpcUserService;
+
+    public LoginReply loginUser() {
+        final AtomicReference<LoginReply> capturedReply = new AtomicReference<>();
+        final AtomicReference<Throwable> capturedError = new AtomicReference<>();
+        final AtomicBoolean completed = new AtomicBoolean(false);
+
+        StreamObserver<LoginReply> responseObserver = new StreamObserver<>() {
+            @Override
+            public void onNext(LoginReply value) {
+                capturedReply.set(value);
+            }
+    
+            @Override
+            public void onError(Throwable t) {
+                capturedError.set(t);
+            }
+    
+            @Override
+            public void onCompleted() {
+                completed.set(true);
+            }
+        };
+        LoginRequest request = LoginRequest.newBuilder()
+                            .setUsername(username)
+                            .setPassword(password)
+                            .build();
+
+        grpcUserService.login(request, responseObserver);
+        // Wait for the gRPC response to be processed
+        while (!completed.get() && capturedError.get() == null) {
+            try {
+                Thread.sleep(10); // Sleep briefly to avoid busy-waiting
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Authentication process was interrupted");
+            }
+        }
+        LoginReply reply = capturedReply.get();
+        if (reply == null) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "No response received from authentication service");
+        }
+
+        return reply;
+    }
+
+    public CreateUserReply createUser() {
+        CreateUserRequest request = CreateUserRequest.newBuilder()
+                                    .setUsername(username)
+                                    .setPassword(password)
+                                    .build();
+        final AtomicReference<CreateUserReply> capturedCreateReply = new AtomicReference<>();
+        final AtomicReference<Throwable> capturedCreateError = new AtomicReference<>();
+        final AtomicBoolean createCompleted = new AtomicBoolean(false);
+
+        StreamObserver<CreateUserReply> createResponseObserver = new StreamObserver<>() {
+            @Override
+            public void onNext(CreateUserReply value) {
+                capturedCreateReply.set(value);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                capturedCreateError.set(t);
+            }
+
+            @Override
+            public void onCompleted() {
+                createCompleted.set(true);
+            }
+        };
+        
+        grpcUserService.createUser(request, createResponseObserver);
+
+        // Wait for the gRPC response to be processed
+        while (!createCompleted.get() && capturedCreateError.get() == null) {
+            try {
+                Thread.sleep(10); // Sleep briefly to avoid busy-waiting
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "User creation process was interrupted");
+            }
+        }
+
+        CreateUserReply reply = capturedCreateReply.get();
+        if (reply == null) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "No response received from user creation service");
+        }
+
+        return reply;
+    }
+    boolean validateSession(String token) {
+        // Implement session validation logic, e.g., check if the token exists in the database and is not expired
+        return true; // Placeholder for actual validation logic
+    }
+}

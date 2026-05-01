@@ -1,0 +1,52 @@
+@Service
+public class AccountClient {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AccountClient.class);
+
+    @GrpcClient("account-service-grpc") // (1)
+    AccountsServiceGrpc.AccountsServiceBlockingStub stub;
+
+    public CustomerProto.Accounts getAccountsByCustomerId(int customerId) {
+        try {
+            return stub.findByCustomer(Int32Value.newBuilder().setValue(customerId).build());
+        } catch (final StatusRuntimeException e) {
+
+            LOG.error("gRPC error: {}", e.getStatus());
+            throw e;
+        }
+    }
+
+    public void greet(String name) {
+        // Log a message indicating the intention to greet a user.
+        logger.info("Will try to greet " + name + " ...");
+      
+        // Creating a request with the user's name.
+        HelloRequest request = HelloRequest.newBuilder().setName(name).build();
+        HelloReply response;
+        try {
+          // Call the original method on the server.
+          response = blockingStub.sayHello(request);
+        } catch (StatusRuntimeException e) {
+          // Log a warning if the RPC fails.
+          logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
+          return;
+        }
+      
+        // Log the response from the original method.
+        logger.info("Greeting: " + response.getMessage());
+      
+        try {
+          // Call the new method on the server.
+          response = blockingStub.sayHelloAgain(request);
+        } catch (StatusRuntimeException e) {
+          // Log a warning if the RPC fails.
+          logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
+          return;
+        }
+      
+        // Log the response from the new method.
+        logger.info("Greeting: " + response.getMessage());
+      }
+}
+// Client-side logic for interacting with the gRPC service.
+
