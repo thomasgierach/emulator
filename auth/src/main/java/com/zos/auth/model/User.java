@@ -93,7 +93,7 @@ public class User {
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
     }
-    public HashMap toMap() {
+    public HashMap<String, Object> toMap() {
         HashMap<String, Object> map = new HashMap<>();
         map.put("userPk", userPk);
         map.put( "email", email);

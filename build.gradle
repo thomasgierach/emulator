@@ -22,6 +22,7 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	implementation 'org.slf4j:slf4j-api'
+	developmentOnly("org.springframework.boot:spring-boot-devtools")
 	//runtimeOnly 'io.grpc:grpc-netty-shaded'
 	//implementation 'io.grpc:grpc-protobuf'
 	//implementation 'io.grpc:grpc-stub'

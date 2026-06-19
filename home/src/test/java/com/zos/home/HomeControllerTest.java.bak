@@ -1,0 +1,55 @@
+package com.zos.home;
+
+import com.zos.home.controller.HomeController;
+import com.zos.home.service.AuthClientService;
+import com.zos.home.dto.LoginRequestDto;
+import com.zos.home.dto.LoginResponseDto;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
+public class HomeControllerTest {
+    private HomeController homeController;
+    private AuthClientService authClientService;
+
+    @BeforeEach 
+    public void setup() {
+        authClientService = Mockito.mock(AuthClientService.class);
+        homeController = new HomeController(authClientService);
+    }
+
+    @Test 
+    public void testSuccessfulLogin() {
+        String username = "testuser";
+        String password = "password123456789";
+
+        LoginRequestDto request = new LoginRequestDto(username, password);
+        LoginResponseDto response = new LoginResponseDto(true, username, "BASIC", "mocked-token", "Login successful");
+
+        when(authClientService.login(request))
+            .thenReturn(response);
+
+        ResponseEntity<?> result = homeController.login(request);
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+/* 
+        System.out.println("status = " + result.getStatusCode());
+        System.out.println("success = " + body.getSuccess());
+        System.out.println("token = " + body.getToken());
+        System.out.println("error = " + body.getErrorMessage());
+        
+        assertEquals(HttpStatus.OK, result.getStatusCode());
+        assertNotNull(result.getBody());
+        assertTrue(result.getBody().getSuccess());
+        assertNotNull(result.getBody().getToken());
+        */
+    }
+}

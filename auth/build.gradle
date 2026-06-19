@@ -20,7 +20,10 @@ repositories {
     maven { url 'https://repo.spring.io/snapshot' }
 }
 
+def grpcVersion = '1.70.0'
+
 dependencies {
+    implementation project(':proto')
 	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -40,9 +43,11 @@ dependencies {
     // Optional: For PKIX/CMS/OCSP/PKCS support
     implementation 'org.bouncycastle:bcpkix-jdk18on:1.83'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    implementation "io.grpc:grpc-stub:${grpcVersion}"
+    implementation "io.grpc:grpc-protobuf:${grpcVersion}"
+    implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"
 	//implementation 'io.hypersistence:hypersistence-utils-hibernate-55:3.0.0'
-	implementation platform("org.springframework.grpc:spring-grpc-dependencies:1.0.2")
-	implementation 'org.springframework.grpc:spring-grpc-server-spring-boot-starter'
     //runtimeOnly 'io.grpc:grpc-netty-shaded'
     //implementation 'io.grpc:grpc-protobuf'
     //implementation 'io.grpc:grpc-stub'

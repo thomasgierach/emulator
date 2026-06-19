@@ -1,13 +1,14 @@
-package com.zos.auth.service;
+package com.zos.auth;
 
 import com.zos.auth.model.User;
 import com.zos.auth.model.UserRoles;
-import com.zos.auth.proto.CreateUserRequest;
-import com.zos.auth.proto.CreateUserReply;
+import com.zos.auth.service.AuthService;
+//import com.zos.auth.proto.CreateUserRequest;
+//import com.zos.auth.proto.CreateUserReply;
 import com.zos.auth.proto.LoginRequest;
 import com.zos.auth.proto.LoginReply;
-import com.zos.auth.proto.ValidateSessionRequest;
-import com.zos.auth.proto.ValidateSessionReply;
+//import com.zos.auth.proto.ValidateSessionRequest;
+//import com.zos.auth.proto.ValidateSessionReply;
 import com.zos.auth.repository.UsersRepository;
 import com.zos.auth.service.GrpcUserService;
 
@@ -27,6 +28,7 @@ import static org.mockito.Mockito.*;
 class GrpcUserServiceTest {
 
     private GrpcUserService grpcUserService;
+    private AuthService authService;
     private UsersRepository usersRepository;
     private final String login_successful = "Login successful";
     private final String login_failed = "Invalid username or password";
@@ -34,7 +36,8 @@ class GrpcUserServiceTest {
     @BeforeEach
     void setUp() {
         usersRepository = mock(UsersRepository.class);
-        grpcUserService = new GrpcUserService(usersRepository);
+        authService = new AuthService(usersRepository);
+        grpcUserService = new GrpcUserService(authService);
     }
 
     @Test

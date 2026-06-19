@@ -1,6 +1,6 @@
 package com.zos.auth;
 
-import com.zos.auth.model.User;
+//import com.zos.auth.model.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import static org.junit.jupiter.api.Assertions.assertTrue;

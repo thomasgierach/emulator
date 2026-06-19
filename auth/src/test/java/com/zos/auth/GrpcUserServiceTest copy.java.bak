@@ -1,0 +1,139 @@
+package com.zos.auth.service;
+
+import com.zos.auth.model.User;
+import com.zos.auth.model.UserRoles;
+import com.zos.auth.service.AuthService;
+import com.zos.auth.proto.CreateUserRequest;
+import com.zos.auth.proto.CreateUserReply;
+import com.zos.auth.proto.LoginRequest;
+import com.zos.auth.proto.LoginReply;
+import com.zos.auth.proto.ValidateSessionRequest;
+import com.zos.auth.proto.ValidateSessionReply;
+import com.zos.auth.repository.UsersRepository;
+import com.zos.auth.service.GrpcUserService;
+
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
+
+import io.grpc.stub.StreamObserver;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+class GrpcUserServiceTest {
+
+    private GrpcUserService grpcUserService;
+    private AuthService authService;
+    private final String login_successful = "Login successful";
+    private final String login_failed = "Invalid username or password";
+
+    @BeforeEach
+    void setUp() {
+        grpcUserService = new GrpcUserService(authService);
+    }
+
+    @Test
+    void testSuccessfulLogin() {
+        String username = "testuser";
+        String email = "test@gmail.com";
+        Argon2PasswordEncoder passwordEncoder = Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
+
+        String rawPassword = "password123";
+        String passwordHash = passwordEncoder.encode(rawPassword);
+        UserRoles role = UserRoles.BASIC;
+
+        User testUser = new User(username, email, role, passwordHash);
+
+        when(usersRepository.findByUsername(username))
+                .thenReturn(Optional.of(testUser));
+
+        LoginRequest request = LoginRequest.newBuilder()
+                .setUsername(username)
+                .setPassword(rawPassword)
+                .build();
+
+        AtomicReference<LoginReply> capturedReply = new AtomicReference<>();
+        AtomicReference<Throwable> capturedError = new AtomicReference<>();
+        AtomicBoolean completed = new AtomicBoolean(false);
+
+        StreamObserver<LoginReply> responseObserver = new StreamObserver<>() {
+            @Override
+            public void onNext(LoginReply value) {
+                capturedReply.set(value);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                capturedError.set(t);
+            }
+
+            @Override
+            public void onCompleted() {
+                completed.set(true);
+            }
+        };
+
+        grpcUserService.login(request, responseObserver);
+
+        assertNull(capturedError.get());
+        assertTrue(completed.get());
+
+        LoginReply reply = capturedReply.get();
+        assertNotNull(reply);
+        assertEquals("testuser", reply.getUsername());
+        assertEquals(UserRoles.BASIC.name(), reply.getRole());
+        assertTrue(reply.getSuccess());
+        assertEquals(login_successful, reply.getErrorMessage());
+
+        verify(usersRepository).findByUsername(username);
+    }
+
+    @Test
+    void testFailedLogin() {
+        String username = "testuser";
+        String rawPassword = "password123";
+
+        LoginRequest request = LoginRequest.newBuilder()
+                .setUsername(username)
+                .setPassword(rawPassword)
+                .build();
+
+        AtomicReference<LoginReply> capturedReply = new AtomicReference<>();
+        AtomicReference<Throwable> capturedError = new AtomicReference<>();
+        AtomicBoolean completed = new AtomicBoolean(false);
+
+        StreamObserver<LoginReply> responseObserver = new StreamObserver<>() {
+            @Override
+            public void onNext(LoginReply value) {
+                capturedReply.set(value);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                capturedError.set(t);
+            }
+
+            @Override
+            public void onCompleted() {
+                completed.set(true);
+            }
+        };
+
+        grpcUserService.login(request, responseObserver);
+
+        assertNull(capturedError.get());
+        assertTrue(completed.get());
+
+        LoginReply reply = capturedReply.get();
+        assertNotNull(reply);
+        assertEquals(username, reply.getUsername());
+        assertEquals("", reply.getRole());
+        assertFalse(reply.getSuccess());
+        assertEquals(login_failed, reply.getErrorMessage());
+    }
+}
