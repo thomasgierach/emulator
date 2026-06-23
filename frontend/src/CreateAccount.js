@@ -1,95 +1,86 @@
-// CreateAccount.js:
+// CreateAccount.js
 import React, { useState } from 'react';
-import { Form, Button, Container, Row, Col } from 'react-bootstrap';
 import './CreateAccount.css';
-import { createAccountFunc } from './createAccountFunc';   
-import { Link } from 'react-router-dom';
+import { createAccountFunc } from './createAccountFunc';
 
-
-
-
-function Login() {
+function CreateAccount() {
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [email, setEmail] = useState('');
-  const [errors, setErrors] = useState({});
+  const [password, setPassword] = useState('');
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!username) newErrors.username = 'Username is required';
-    
-    if (!password) newErrors.password = 'Password is required';
-    else if (password.length < 6) newErrors.password = 'Password must be at least 6 characters';
-    else if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
-    
-    if (!email) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Email is invalid';
-    return newErrors;
-  };
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
-  const handleSubmit = async (event) => {
+  async function handleSubmit(event) {
     event.preventDefault();
-    const formErrors = validateForm();
-    if (Object.keys(formErrors).length > 0) {
-      setErrors(formErrors);
-    } else {
-      setErrors({});
-      try {
-        const userData = await loginFunc(username, password);
-        console.log('Login successful:', userData);
-        // Here you would typically store the user data and redirect
-      } catch (error) {
-        setErrors({ form: 'Login failed. Please try again.' });
-      }
+
+    setMessage('');
+    setError('');
+
+    try {
+      await createAccountFunc({
+        username,
+        email,
+        password
+      });
+
+      setMessage('User created successfully.');
+      setUsername('');
+      setEmail('');
+      setPassword('');
+    } catch (err) {
+      console.error(err);
+      setError('Unable to create user.');
     }
-  };
+  }
 
   return (
-    <div className="login-wrapper">
-      <div className="login-form-container">
-        <h2 className="login-title">Login</h2>
-        <Form onSubmit={handleSubmit} className="login-form">
-          <Form.Group className="mb-3" controlId="formUsername">
-            <Form.Label>Username</Form.Label>
-            <Form.Control
-              type="username"
-              placeholder="Enter username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              isInvalid={!!errors.username}
-            />
-            <Form.Control.Feedback type="invalid">
-              {errors.username}
-            </Form.Control.Feedback>
-          </Form.Group>
+    <div className="container mt-4">
+      <h1>Create User</h1>
 
+      {message && <div className="alert alert-success">{message}</div>}
+      {error && <div className="alert alert-danger">{error}</div>}
 
-          <Form.Group className="mb-3" controlId="formBasicPassword">
-            <Form.Label>Password</Form.Label>
-            <Form.Control
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              isInvalid={!!errors.password}
-            />
-            <Form.Control.Feedback type="invalid">
-              {errors.password}
-            </Form.Control.Feedback>
-          </Form.Group>
+      <form onSubmit={handleSubmit}>
+        <div className="mb-3">
+          <label className="form-label">Username</label>
+          <input
+            className="form-control"
+            type="text"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            required
+          />
+        </div>
 
+        <div className="mb-3">
+          <label className="form-label">Email</label>
+          <input
+            className="form-control"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+          />
+        </div>
 
-          <Button variant="primary" type="submit" className="login-button">
-            Login
-          </Button>
-          <Link to="/register" className="create-account-link">
-            Create Account
-          </Link>
-        </Form>
-      </div>
+        <div className="mb-3">
+          <label className="form-label">Password</label>
+          <input
+            className="form-control"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+          />
+        </div>
+
+        <button className="btn btn-primary" type="submit">
+          Create Account
+        </button>
+      </form>
     </div>
   );
 }
 
-export default Login;
+export default CreateAccount;

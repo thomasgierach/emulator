@@ -1,12 +1,9 @@
 // Login.js:
 import React, { useState } from 'react';
-import { Form, Button, Container, Row, Col } from 'react-bootstrap';
+import { Form, Button } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
 import './Login.css';
-import { loginFunc } from './loginFunc';   
-import { Link } from 'react-router';
-
-
-
+import { loginFunc } from './loginFunc';
 
 function Login() {
   const [username, setUsername] = useState('');
