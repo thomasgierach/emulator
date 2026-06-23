@@ -27,3 +27,16 @@ In progress:
 - Spring Security integration
 - Testcontainers integration
 - z/OS emulator workflow expansion
+
+## Running Locally
+
+```bash
+docker compose up --build
+```
+## Architecture
+
+- `auth` — authentication service with PostgreSQL persistence and gRPC API
+- `home` — backend service that communicates with auth over HTTP/gRPC
+- `proto` — shared protobuf definitions
+- `frontend` — React login UI
+- `docker-compose.yml` — local infrastructure for Postgres, Redis, Kafka, and services
