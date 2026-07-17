@@ -63,8 +63,15 @@ public class AuthService {
                 UserRoles.BASIC,
                 passwordEncoder.encode(dto.getPassword())
         );
-
-        usersRepository.save(newUser);
+        try {
+            usersRepository.save(newUser);
+        } catch (Exception e) {
+            return CreateUserReply.newBuilder()
+                    .setSuccess(false)
+                    .setUsername(dto.getUsername())
+                    .setErrorMessage("Error creating user: " + e.getMessage())
+                    .build();
+        }
 
         return CreateUserReply.newBuilder()
                 .setSuccess(true)

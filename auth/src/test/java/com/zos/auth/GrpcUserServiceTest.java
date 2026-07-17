@@ -1,10 +1,12 @@
 package com.zos.auth;
 
+import com.zos.auth.dto.CreateUserDto;
+import com.zos.auth.dto.LoginDto;
 import com.zos.auth.model.User;
 import com.zos.auth.model.UserRoles;
 import com.zos.auth.service.AuthService;
-//import com.zos.auth.proto.CreateUserRequest;
-//import com.zos.auth.proto.CreateUserReply;
+import com.zos.auth.proto.CreateUserRequest;
+import com.zos.auth.proto.CreateUserReply;
 import com.zos.auth.proto.LoginRequest;
 import com.zos.auth.proto.LoginReply;
 //import com.zos.auth.proto.ValidateSessionRequest;
@@ -17,14 +19,19 @@ import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import io.grpc.stub.StreamObserver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class GrpcUserServiceTest {
 
     private GrpcUserService grpcUserService;
@@ -36,64 +43,52 @@ class GrpcUserServiceTest {
     @BeforeEach
     void setUp() {
         usersRepository = mock(UsersRepository.class);
-        authService = new AuthService(usersRepository);
+        authService = mock(AuthService.class);
         grpcUserService = new GrpcUserService(authService);
     }
 
     @Test
     void testSuccessfulLogin() {
         String username = "testuser";
-        String email = "test@gmail.com";
-        Argon2PasswordEncoder passwordEncoder = Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
-
         String rawPassword = "password123";
-        String passwordHash = passwordEncoder.encode(rawPassword);
-        UserRoles role = UserRoles.BASIC;
-
-        User testUser = new User(username, email, role, passwordHash);
-
-        when(usersRepository.findByUsername(username))
-                .thenReturn(Optional.of(testUser));
 
         LoginRequest request = LoginRequest.newBuilder()
                 .setUsername(username)
                 .setPassword(rawPassword)
                 .build();
 
-        AtomicReference<LoginReply> capturedReply = new AtomicReference<>();
-        AtomicReference<Throwable> capturedError = new AtomicReference<>();
-        AtomicBoolean completed = new AtomicBoolean(false);
+        LoginReply expectedReply = LoginReply.newBuilder()
+                .setUsername(username)
+                .setRole(UserRoles.BASIC.name())
+                .setToken("generated-token")
+                .setSuccess(true)
+                .setErrorMessage(login_successful)
+                .build();
 
-        StreamObserver<LoginReply> responseObserver = new StreamObserver<>() {
-            @Override
-            public void onNext(LoginReply value) {
-                capturedReply.set(value);
-            }
+        doReturn(expectedReply)
+                .when(authService)
+                .login(any(LoginDto.class));
 
-            @Override
-            public void onError(Throwable t) {
-                capturedError.set(t);
-            }
+        @SuppressWarnings("unchecked")
+        StreamObserver<LoginReply> observer = mock(StreamObserver.class);
 
-            @Override
-            public void onCompleted() {
-                completed.set(true);
-            }
-        };
+        grpcUserService.login(request, observer);
 
-        grpcUserService.login(request, responseObserver);
+        ArgumentCaptor<LoginDto> dtoCaptor =
+                ArgumentCaptor.forClass(LoginDto.class);
 
-        assertNull(capturedError.get());
-        assertTrue(completed.get());
+        verify(authService).login(dtoCaptor.capture());
 
-        LoginReply reply = capturedReply.get();
-        assertNotNull(reply);
-        assertEquals("testuser", reply.getUsername());
-        assertEquals(UserRoles.BASIC.name(), reply.getRole());
-        assertTrue(reply.getSuccess());
-        assertEquals(login_successful, reply.getErrorMessage());
+        LoginDto capturedDto = dtoCaptor.getValue();
 
-        verify(usersRepository).findByUsername(username);
+        assertAll(
+                () -> assertEquals(username, capturedDto.getUsername()),
+                () -> assertEquals(rawPassword, capturedDto.getPassword())
+        );
+
+        verify(observer).onNext(expectedReply);
+        verify(observer).onCompleted();
+        verify(observer, never()).onError(any());
     }
 
     @Test
@@ -106,37 +101,83 @@ class GrpcUserServiceTest {
                 .setPassword(rawPassword)
                 .build();
 
-        AtomicReference<LoginReply> capturedReply = new AtomicReference<>();
-        AtomicReference<Throwable> capturedError = new AtomicReference<>();
-        AtomicBoolean completed = new AtomicBoolean(false);
+        LoginReply expectedReply = LoginReply.newBuilder()
+                .setUsername(username)
+                .setRole("")
+                .setToken("")
+                .setSuccess(false)
+                .setErrorMessage(login_failed)
+                .build();
 
-        StreamObserver<LoginReply> responseObserver = new StreamObserver<>() {
-            @Override
-            public void onNext(LoginReply value) {
-                capturedReply.set(value);
-            }
+        doReturn(expectedReply)
+                .when(authService)
+                .login(any(LoginDto.class));
 
-            @Override
-            public void onError(Throwable t) {
-                capturedError.set(t);
-            }
+        @SuppressWarnings("unchecked")
+        StreamObserver<LoginReply> observer = mock(StreamObserver.class);
 
-            @Override
-            public void onCompleted() {
-                completed.set(true);
-            }
-        };
+        grpcUserService.login(request, observer);
 
-        grpcUserService.login(request, responseObserver);
+        ArgumentCaptor<LoginDto> dtoCaptor =
+                ArgumentCaptor.forClass(LoginDto.class);
 
-        assertNull(capturedError.get());
-        assertTrue(completed.get());
+        verify(authService).login(dtoCaptor.capture());
 
-        LoginReply reply = capturedReply.get();
-        assertNotNull(reply);
-        assertEquals(username, reply.getUsername());
-        assertEquals("", reply.getRole());
-        assertFalse(reply.getSuccess());
-        assertEquals(login_failed, reply.getErrorMessage());
+        LoginDto capturedDto = dtoCaptor.getValue();
+
+        assertAll(
+                () -> assertEquals(username, capturedDto.getUsername()),
+                () -> assertEquals(rawPassword, capturedDto.getPassword())
+        );
+
+        verify(observer).onNext(expectedReply);
+        verify(observer).onCompleted();
+        verify(observer, never()).onError(any());
+    }
+
+    @Test
+    void createUser_whenServiceSucceeds_returnsSuccessfulReply() {
+        String username = "testuser";
+        String password = "password123";
+        String email = "test@gmail.com";
+    
+        CreateUserRequest request = CreateUserRequest.newBuilder()
+                .setUsername(username)
+                .setPassword(password)
+                .setEmail(email)
+                .build();
+    
+        CreateUserReply expectedReply = CreateUserReply.newBuilder()
+                .setSuccess(true)
+                .setUsername(username)
+                .setErrorMessage("User created successfully")
+                .build();
+    
+        doReturn(expectedReply)
+                .when(authService)
+                .createUser(any(CreateUserDto.class));
+    
+        @SuppressWarnings("unchecked")
+        StreamObserver<CreateUserReply> observer =
+                mock(StreamObserver.class);
+    
+        grpcUserService.createUser(request, observer);
+    
+        ArgumentCaptor<CreateUserDto> captor =
+                ArgumentCaptor.forClass(CreateUserDto.class);
+    
+        verify(authService).createUser(captor.capture());
+    
+        CreateUserDto actualDto = captor.getValue();
+    
+        assertAll(
+                () -> assertEquals(username, actualDto.getUsername()),
+                () -> assertEquals(email, actualDto.getEmail()),
+                () -> assertEquals(password, actualDto.getPassword())
+        );
+    
+        verify(observer).onNext(expectedReply);
+        verify(observer).onCompleted();
+        verify(observer, never()).onError(any());
     }
 }

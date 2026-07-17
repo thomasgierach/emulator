@@ -47,6 +47,7 @@ dependencies {
     implementation "io.grpc:grpc-stub:${grpcVersion}"
     implementation "io.grpc:grpc-protobuf:${grpcVersion}"
     implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
 	//implementation 'io.hypersistence:hypersistence-utils-hibernate-55:3.0.0'
     //runtimeOnly 'io.grpc:grpc-netty-shaded'
     //implementation 'io.grpc:grpc-protobuf'

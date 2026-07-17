@@ -25,10 +25,12 @@ public class AuthController {
     private static final MediaType PROTOBUF =
         MediaType.valueOf("application/x-protobuf");
 
-    @PostMapping("/users")
-    public ResponseEntity<CreateUserReply> createUser(@RequestBody CreateUserDto dto) {
-        CreateUserReply reply = authService.createUser(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(reply);
+    @PostMapping(
+        value = "/users",
+        produces = "application/x-protobuf"
+    )
+    public CreateUserReply createUser(@RequestBody CreateUserDto dto) {
+        return authService.createUser(dto);
     }
 
     @PostMapping(
