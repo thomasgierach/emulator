@@ -1,40 +1,136 @@
 package com.zos.home;
 
-import com.zos.home.service.AuthClientService;
 import com.zos.home.dto.LoginRequestDto;
 import com.zos.home.dto.LoginResponseDto;
+import com.zos.home.service.AuthClientService;
 
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
+
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
 import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
+import static org.junit.jupiter.api.Assumptions.abort;
 
-import org.springframework.web.reactive.function.client.WebClient;
+@SpringBootTest
+class AuthClientServiceIntegrationTest {
 
+    private static final MockWebServer AUTH_SERVER = new MockWebServer();
 
-public class AuthClientServiceIntegrationTest {
-    private AuthClientService authClientService;
-    private WebClient.Builder builder;
-
-    @BeforeEach
-    public void setUp() {
-        builder = WebClient.builder();
-        authClientService = new AuthClientService(builder, "http://localhost:8081");
+    static {
+        try {
+            AUTH_SERVER.start();
+        } catch (IOException exception) {
+            throw new ExceptionInInitializerError(exception);
+        }
     }
-    @Disabled("Requires actual auth service running at http://localhost:8081")
+
+    @DynamicPropertySource
+    static void configureAuthService(
+            DynamicPropertyRegistry registry
+    ) {
+        registry.add(
+                "auth.service.base-url",
+                () -> AUTH_SERVER.url("/").toString()
+        );
+    }
+
+    @Autowired
+    private AuthClientService authClientService;
+
+    @AfterAll
+    static void shutDownServer() throws IOException {
+        AUTH_SERVER.shutdown();
+    }
+
     @Test
-    public void testLogin() {
+    void loginSendsRequestAndReturnsSuccessfulResponse()
+            throws InterruptedException {
+
         // Given
-        String username = "testuser";
-        String password = "password123456789";
-        LoginRequestDto request = new LoginRequestDto(username, password);
+        AUTH_SERVER.enqueue(
+                new MockResponse()
+                        .setResponseCode(200)
+                        .addHeader(
+                                "Content-Type",
+                                "application/json"
+                        )
+                        .setBody("""
+                                {
+                                  "success": true,
+                                  "username": "testuser",
+                                  "role": "BASIC",
+                                  "token": "mocked-token",
+                                  "errorMessage": "Login successful"
+                                }
+                                """)
+        );
+
+        LoginRequestDto request =
+                new LoginRequestDto(
+                        "testuser",
+                        "password123456789"
+                );
 
         // When
-        LoginResponseDto response = authClientService.login(request);
+        LoginResponseDto response =
+                authClientService.login(request);
 
-        // Then
+        // Then: verify the response was deserialized
         assertNotNull(response);
-        assertTrue(response.getSuccess());
-        assertNotNull(response.getToken());
+        System.out.println("Response: " + response.toString());
+        assertAll(
+                () -> assertTrue(response.getSuccess()),
+                () -> assertEquals(
+                        "testuser",
+                        response.getUsername()
+                ),
+                () -> assertEquals(
+                        "BASIC",
+                        response.getRole()
+                ),
+                () -> assertEquals(
+                        "mocked-token",
+                        response.getToken()
+                )
+        );
+
+        // Then: verify that AuthClientService made an HTTP request
+        RecordedRequest recordedRequest =
+                AUTH_SERVER.takeRequest(
+                        2,
+                        TimeUnit.SECONDS
+                );
+
+        assertNotNull(
+                recordedRequest,
+                "AuthClientService did not send an HTTP request"
+        );
+
+        assertEquals("POST", recordedRequest.getMethod());
+
+        String requestBody =
+                recordedRequest.getBody().readUtf8();
+
+        assertAll(
+                () -> assertTrue(
+                        requestBody.contains("\"username\":\"testuser\"")
+                ),
+                () -> assertTrue(
+                        requestBody.contains(
+                                "\"password\":\"password123456789\""
+                        )
+                )
+        );
     }
 }

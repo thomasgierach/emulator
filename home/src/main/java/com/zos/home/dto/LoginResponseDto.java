@@ -47,4 +47,14 @@ public class LoginResponseDto {
     public void setErrorMessage(String errorMessage) {
         this.errorMessage = errorMessage;
     }
+    @Override
+    public String toString() {
+        return "LoginResponseDto{" +
+                "success=" + success +
+                ", username='" + username + '\'' +
+                ", role='" + role + '\'' +
+                ", token='" + token + '\'' +
+                ", errorMessage='" + errorMessage + '\'' +
+                '}';
+    }
 }

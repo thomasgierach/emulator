@@ -65,19 +65,19 @@ public class AuthService {
         );
         try {
             usersRepository.save(newUser);
-        } catch (Exception e) {
             return CreateUserReply.newBuilder()
-                    .setSuccess(false)
-                    .setUsername(dto.getUsername())
-                    .setErrorMessage("Error creating user: " + e.getMessage())
-                    .build();
-        }
-
-        return CreateUserReply.newBuilder()
                 .setSuccess(true)
                 .setUsername(newUser.getUsername())
                 .setErrorMessage("User created successfully")
                 .build();
+        } catch (Exception e) {
+            return CreateUserReply.newBuilder()
+                    .setSuccess(false)
+                    .setUsername(dto.getUsername())
+                    .setErrorMessage("Error creating user.")
+                    .build();
+        }
+
     }
 
     private LoginReply failedLogin(String username) {
