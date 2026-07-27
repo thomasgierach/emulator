@@ -1,5 +1,7 @@
 package com.zos.home;
 
+import com.zos.home.dto.CreateUserRequestDto;
+import com.zos.home.dto.CreateUserResponseDto;
 import com.zos.home.dto.LoginRequestDto;
 import com.zos.home.dto.LoginResponseDto;
 import com.zos.home.service.AuthClientService;
@@ -7,6 +9,8 @@ import com.zos.home.service.AuthClientService;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+
+import com.zos.auth.proto.CreateUserReply;
 import com.zos.auth.proto.LoginReply;
 
 import okio.Buffer;
@@ -75,6 +79,24 @@ class AuthClientServiceIntegrationTest {
                         () -> assertEquals(
                                 protobufResponse.getToken(),
                                 response.getToken()
+                        ),
+                        () -> assertEquals(
+                                protobufResponse.getErrorMessage(),
+                                response.getErrorMessage()
+                        )
+                );
+        }
+        void createUserAssertions(CreateUserReply protobufResponse, CreateUserResponseDto response) {
+                assertNotNull(response);
+
+                assertAll(
+                        () -> assertEquals(
+                                protobufResponse.getSuccess(),
+                                response.getSuccess()
+                        ),
+                        () -> assertEquals(
+                                protobufResponse.getUsername(),
+                                response.getUsername()
                         ),
                         () -> assertEquals(
                                 protobufResponse.getErrorMessage(),
@@ -200,6 +222,78 @@ class AuthClientServiceIntegrationTest {
                 assertEquals("POST", recordedRequest.getMethod());
                 assertEquals(
                         "/auth/login",
+                        recordedRequest.getPath()
+                );
+
+                assertEquals(
+                        "application/json",
+                        recordedRequest.getHeader("Content-Type")
+                );
+
+                assertEquals(
+                        "application/x-protobuf",
+                        recordedRequest.getHeader("Accept")
+                );
+
+                String requestJson =
+                        recordedRequest.getBody().readUtf8();
+
+                assertTrue(
+                        requestJson.contains(
+                                "\"username\":\"testuser\""
+                        )
+                );
+
+                assertTrue(
+                        requestJson.contains(
+                                "\"password\":\"password123456789\""
+                        )
+                );
+        }
+        @Test
+        void createUserSendsRequestAndReturnsSuccessfulResponse()
+                throws InterruptedException {
+
+                // Given
+                CreateUserReply protobufResponse =
+                        CreateUserReply.newBuilder()
+                                .setSuccess(true)
+                                .setUsername("testuser")
+                                .setErrorMessage("User created successfully")
+                                .build();
+
+                Buffer responseBody = new Buffer();
+                responseBody.write(protobufResponse.toByteArray());
+
+                AUTH_SERVER.enqueue(
+                        new MockResponse()
+                                .setResponseCode(200)
+                                .addHeader(
+                                        "Content-Type",
+                                        "application/x-protobuf"
+                                )
+                                .setBody(responseBody)
+                );
+
+                CreateUserRequestDto request =
+                        new CreateUserRequestDto(
+                                "testuser",
+                                "password123456789",
+                                "test@email.com"
+                        );
+
+                // When
+                CreateUserResponseDto response =
+                        authClientService.createUser(request);
+
+                createUserAssertions(protobufResponse, response);
+
+                RecordedRequest recordedRequest =
+                        AUTH_SERVER.takeRequest();
+
+                assertEquals("POST", recordedRequest.getMethod());
+                assertEquals(
+                        "/auth/users",
                         recordedRequest.getPath()
                 );
 
