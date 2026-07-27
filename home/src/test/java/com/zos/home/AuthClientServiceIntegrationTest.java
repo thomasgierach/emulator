@@ -28,126 +28,204 @@ import static org.junit.jupiter.api.Assumptions.abort;
 @SpringBootTest
 class AuthClientServiceIntegrationTest {
 
-    private static final MockWebServer AUTH_SERVER = new MockWebServer();
+        private static final MockWebServer AUTH_SERVER = new MockWebServer();
 
-    static {
-        try {
-            AUTH_SERVER.start();
-        } catch (IOException exception) {
-            throw new ExceptionInInitializerError(exception);
+        static {
+                try {
+                AUTH_SERVER.start();
+                } catch (IOException exception) {
+                throw new ExceptionInInitializerError(exception);
+                }
         }
-    }
 
-    @DynamicPropertySource
-    static void configureAuthService(
-            DynamicPropertyRegistry registry
-    ) {
-        registry.add(
-                "auth.service.base-url",
-                () -> AUTH_SERVER.url("/").toString()
-        );
-    }
+        @DynamicPropertySource
+        static void configureAuthService(
+                DynamicPropertyRegistry registry
+        ) {
+                registry.add(
+                        "auth.service.base-url",
+                        () -> AUTH_SERVER.url("/").toString()
+                );
+        }
 
-    @Autowired
-    private AuthClientService authClientService;
+        @Autowired
+        private AuthClientService authClientService;
 
-    @AfterAll
-    static void shutDownServer() throws IOException {
-        AUTH_SERVER.shutdown();
-    }
+        @AfterAll
+        static void shutDownServer() throws IOException {
+                AUTH_SERVER.shutdown();
+        }
 
+        void loginAssertions(LoginReply protobufResponse, LoginResponseDto response) {
+                assertNotNull(response);
+
+                assertAll(
+                        () -> assertEquals(
+                                protobufResponse.getSuccess(),
+                                response.getSuccess()
+                        ),
+                        () -> assertEquals(
+                                protobufResponse.getUsername(),
+                                response.getUsername()
+                        ),
+                        () -> assertEquals(
+                                protobufResponse.getRole(),
+                                response.getRole()
+                        ),
+                        () -> assertEquals(
+                                protobufResponse.getToken(),
+                                response.getToken()
+                        ),
+                        () -> assertEquals(
+                                protobufResponse.getErrorMessage(),
+                                response.getErrorMessage()
+                        )
+                );
+        }
         @Test
         void loginSendsRequestAndReturnsSuccessfulResponse()
                 throws InterruptedException {
 
-        // Given
-        LoginReply protobufResponse =
-                LoginReply.newBuilder()
-                        .setSuccess(true)
-                        .setUsername("testuser")
-                        .setRole("BASIC")
-                        .setToken("mocked-token")
-                        .setErrorMessage("Login successful")
-                        .build();
+                // Given
+                LoginReply protobufResponse =
+                        LoginReply.newBuilder()
+                                .setSuccess(true)
+                                .setUsername("testuser")
+                                .setRole("BASIC")
+                                .setToken("mocked-token")
+                                .setErrorMessage("Login successful")
+                                .build();
 
-        Buffer responseBody = new Buffer();
-        responseBody.write(protobufResponse.toByteArray());
+                Buffer responseBody = new Buffer();
+                responseBody.write(protobufResponse.toByteArray());
 
-        AUTH_SERVER.enqueue(
-                new MockResponse()
-                        .setResponseCode(200)
-                        .addHeader(
-                                "Content-Type",
-                                "application/x-protobuf"
-                        )
-                        .setBody(responseBody)
-        );
-
-        LoginRequestDto request =
-                new LoginRequestDto(
-                        "testuser",
-                        "password123456789"
+                AUTH_SERVER.enqueue(
+                        new MockResponse()
+                                .setResponseCode(200)
+                                .addHeader(
+                                        "Content-Type",
+                                        "application/x-protobuf"
+                                )
+                                .setBody(responseBody)
                 );
 
-        // When
-        LoginResponseDto response =
-                authClientService.login(request);
+                LoginRequestDto request =
+                        new LoginRequestDto(
+                                "testuser",
+                                "password123456789"
+                        );
 
-        // Then
-        assertNotNull(response);
+                // When
+                LoginResponseDto response =
+                        authClientService.login(request);
 
-        assertAll(
-                () -> assertTrue(response.getSuccess()),
-                () -> assertEquals(
-                        "testuser",
-                        response.getUsername()
-                ),
-                () -> assertEquals(
-                        "BASIC",
-                        response.getRole()
-                ),
-                () -> assertEquals(
-                        "mocked-token",
-                        response.getToken()
-                ),
-                () -> assertEquals(
-                        "Login successful",
-                        response.getErrorMessage()
-                )
-        );
+                loginAssertions(protobufResponse, response);
 
-        RecordedRequest recordedRequest =
-                AUTH_SERVER.takeRequest();
+                RecordedRequest recordedRequest =
+                        AUTH_SERVER.takeRequest();
 
-        assertEquals("POST", recordedRequest.getMethod());
-        assertEquals(
-                "/auth/login",
-                recordedRequest.getPath()
-        );
+                assertEquals("POST", recordedRequest.getMethod());
+                assertEquals(
+                        "/auth/login",
+                        recordedRequest.getPath()
+                );
 
-        assertEquals(
-                "application/json",
-                recordedRequest.getHeader("Content-Type")
-        );
+                assertEquals(
+                        "application/json",
+                        recordedRequest.getHeader("Content-Type")
+                );
 
-        assertEquals(
-                "application/x-protobuf",
-                recordedRequest.getHeader("Accept")
-        );
+                assertEquals(
+                        "application/x-protobuf",
+                        recordedRequest.getHeader("Accept")
+                );
 
-        String requestJson =
-                recordedRequest.getBody().readUtf8();
+                String requestJson =
+                        recordedRequest.getBody().readUtf8();
 
-        assertTrue(
-                requestJson.contains(
-                        "\"username\":\"testuser\""
-                )
-        );
+                assertTrue(
+                        requestJson.contains(
+                                "\"username\":\"testuser\""
+                        )
+                );
 
-        assertTrue(
-                requestJson.contains(
-                        "\"password\":\"password123456789\""
-                )
-        );
+                assertTrue(
+                        requestJson.contains(
+                                "\"password\":\"password123456789\""
+                        )
+                );
+        }
+        @Test
+        void loginSendsRequestAndReturnsFailedResponse()
+                throws InterruptedException {
+
+                // Given
+                LoginReply protobufResponse =
+                        LoginReply.newBuilder()
+                                .setSuccess(false)
+                                .setUsername("testuser")
+                                .setRole("")
+                                .setToken("")
+                                .setErrorMessage("Invalid username or password")
+                                .build();
+
+                Buffer responseBody = new Buffer();
+                responseBody.write(protobufResponse.toByteArray());
+
+                AUTH_SERVER.enqueue(
+                        new MockResponse()
+                                .setResponseCode(200)
+                                .addHeader(
+                                        "Content-Type",
+                                        "application/x-protobuf"
+                                )
+                                .setBody(responseBody)
+                );
+
+                LoginRequestDto request =
+                        new LoginRequestDto(
+                                "testuser",
+                                "password123456789"
+                        );
+
+                // When
+                LoginResponseDto response =
+                        authClientService.login(request);
+
+                loginAssertions(protobufResponse, response);
+
+                RecordedRequest recordedRequest =
+                        AUTH_SERVER.takeRequest();
+
+                assertEquals("POST", recordedRequest.getMethod());
+                assertEquals(
+                        "/auth/login",
+                        recordedRequest.getPath()
+                );
+
+                assertEquals(
+                        "application/json",
+                        recordedRequest.getHeader("Content-Type")
+                );
+
+                assertEquals(
+                        "application/x-protobuf",
+                        recordedRequest.getHeader("Accept")
+                );
+
+                String requestJson =
+                        recordedRequest.getBody().readUtf8();
+
+                assertTrue(
+                        requestJson.contains(
+                                "\"username\":\"testuser\""
+                        )
+                );
+
+                assertTrue(
+                        requestJson.contains(
+                                "\"password\":\"password123456789\""
+                        )
+                );
         }
 }
