@@ -7,6 +7,9 @@ import com.zos.home.service.AuthClientService;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import com.zos.auth.proto.LoginReply;
+
+import okio.Buffer;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -53,27 +56,31 @@ class AuthClientServiceIntegrationTest {
         AUTH_SERVER.shutdown();
     }
 
-    @Test
-    void loginSendsRequestAndReturnsSuccessfulResponse()
-            throws InterruptedException {
+        @Test
+        void loginSendsRequestAndReturnsSuccessfulResponse()
+                throws InterruptedException {
 
         // Given
+        LoginReply protobufResponse =
+                LoginReply.newBuilder()
+                        .setSuccess(true)
+                        .setUsername("testuser")
+                        .setRole("BASIC")
+                        .setToken("mocked-token")
+                        .setErrorMessage("Login successful")
+                        .build();
+
+        Buffer responseBody = new Buffer();
+        responseBody.write(protobufResponse.toByteArray());
+
         AUTH_SERVER.enqueue(
                 new MockResponse()
                         .setResponseCode(200)
                         .addHeader(
                                 "Content-Type",
-                                "application/json"
+                                "application/x-protobuf"
                         )
-                        .setBody("""
-                                {
-                                  "success": true,
-                                  "username": "testuser",
-                                  "role": "BASIC",
-                                  "token": "mocked-token",
-                                  "errorMessage": "Login successful"
-                                }
-                                """)
+                        .setBody(responseBody)
         );
 
         LoginRequestDto request =
@@ -86,9 +93,9 @@ class AuthClientServiceIntegrationTest {
         LoginResponseDto response =
                 authClientService.login(request);
 
-        // Then: verify the response was deserialized
+        // Then
         assertNotNull(response);
-        System.out.println("Response: " + response.toString());
+
         assertAll(
                 () -> assertTrue(response.getSuccess()),
                 () -> assertEquals(
@@ -102,35 +109,45 @@ class AuthClientServiceIntegrationTest {
                 () -> assertEquals(
                         "mocked-token",
                         response.getToken()
+                ),
+                () -> assertEquals(
+                        "Login successful",
+                        response.getErrorMessage()
                 )
         );
 
-        // Then: verify that AuthClientService made an HTTP request
         RecordedRequest recordedRequest =
-                AUTH_SERVER.takeRequest(
-                        2,
-                        TimeUnit.SECONDS
-                );
-
-        assertNotNull(
-                recordedRequest,
-                "AuthClientService did not send an HTTP request"
-        );
+                AUTH_SERVER.takeRequest();
 
         assertEquals("POST", recordedRequest.getMethod());
+        assertEquals(
+                "/auth/login",
+                recordedRequest.getPath()
+        );
 
-        String requestBody =
+        assertEquals(
+                "application/json",
+                recordedRequest.getHeader("Content-Type")
+        );
+
+        assertEquals(
+                "application/x-protobuf",
+                recordedRequest.getHeader("Accept")
+        );
+
+        String requestJson =
                 recordedRequest.getBody().readUtf8();
 
-        assertAll(
-                () -> assertTrue(
-                        requestBody.contains("\"username\":\"testuser\"")
-                ),
-                () -> assertTrue(
-                        requestBody.contains(
-                                "\"password\":\"password123456789\""
-                        )
+        assertTrue(
+                requestJson.contains(
+                        "\"username\":\"testuser\""
                 )
         );
-    }
+
+        assertTrue(
+                requestJson.contains(
+                        "\"password\":\"password123456789\""
+                )
+        );
+        }
 }
