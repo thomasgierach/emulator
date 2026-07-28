@@ -86,3 +86,4 @@ out/
 ### OS files ###
 .DS_Store
 Thumbs.db
+home/src/test/java/com/zos/home/AuthClientServiceIntegrationTest.java.bak
