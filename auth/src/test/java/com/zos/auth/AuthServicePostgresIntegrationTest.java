@@ -1,9 +1,11 @@
 package com.zos.auth;
 
-import com.zos.auth.dto.CreateUserRequestDto;
+import com.zos.auth.dto.CreateUserDto;
 import com.zos.auth.dto.CreateUserResponseDto;
-import com.zos.auth.dto.LoginRequestDto;
+import com.zos.auth.dto.LoginDto;
 import com.zos.auth.dto.LoginResponseDto;
+import com.zos.auth.proto.CreateUserReply;
+import com.zos.auth.proto.LoginReply;
 import com.zos.auth.repository.UsersRepository;
 import com.zos.auth.service.AuthService;
 
@@ -15,7 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.ActiveProfiles;
 
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -29,13 +31,11 @@ class AuthServicePostgresIntegrationTest {
 
     @Container
     @ServiceConnection
-    static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>(
-                    DockerImageName.parse("postgres:15-alpine")
-            )
+    static final PostgreSQLContainer POSTGRES =
+            (new PostgreSQLContainer(DockerImageName.parse("postgres:15-alpine"))
                     .withDatabaseName("auth_test")
                     .withUsername("test")
-                    .withPassword("test");
+                    .withPassword("test"));
 
     @Autowired
     private AuthService authService;
@@ -50,34 +50,39 @@ class AuthServicePostgresIntegrationTest {
 
     @Test
     void loginFailsWhenUserDoesNotExist() {
-        LoginRequestDto request =
-                new LoginRequestDto(
+        LoginDto request =
+                new LoginDto(
                         "nonexistentuser",
                         "wrongpassword"
                 );
 
-        LoginResponseDto response = authService.login(request);
+        LoginReply response = authService.login(request);
 
         assertNotNull(response);
 
+        System.out.println("get success: " + response.getSuccess());
+        System.out.println("get token: " + response.getToken());
+
+        String expectedToken = "";
+
         assertAll(
                 () -> assertFalse(response.getSuccess()),
-                () -> assertNull(response.getToken())
+                () -> assertEquals(response.getToken(), expectedToken)
         );
     }
 
     @Test
     void createdUserCanLogin() {
-        String username = "testuser";
+        String username = "testuser_createdUserCanLogin";
         String password = "password123456789";
-        String email = "test@gmail.com";
+        String email = "test_createdUserCanLogin@gmail.com";
 
-        CreateUserResponseDto createResponse =
+        CreateUserReply createResponse =
                 authService.createUser(
-                        new CreateUserRequestDto(
+                        new CreateUserDto(
                                 username,
-                                password,
-                                email
+                                email,
+                                password
                         )
                 );
 
@@ -87,9 +92,9 @@ class AuthServicePostgresIntegrationTest {
                 createResponse.getErrorMessage()
         );
 
-        LoginResponseDto loginResponse =
+        LoginReply loginResponse =
                 authService.login(
-                        new LoginRequestDto(username, password)
+                        new LoginDto(username, password)
                 );
 
         assertNotNull(loginResponse);
@@ -102,49 +107,50 @@ class AuthServicePostgresIntegrationTest {
 
     @Test
     void loginFailsWithIncorrectPassword() {
-        String username = "testuser";
+        String username = "testuser_loginFailsWithIncorrectPassword";
         String password = "password123456789";
+        String email = "test@gmail.com";
 
-        CreateUserResponseDto createResponse =
+        CreateUserReply createResponse =
                 authService.createUser(
-                        new CreateUserRequestDto(
+                        new CreateUserDto(
                                 username,
-                                password,
-                                "test@gmail.com"
+                                email,
+                                password
                         )
                 );
 
         assertTrue(createResponse.getSuccess());
 
-        LoginResponseDto loginResponse =
+        LoginReply loginResponse =
                 authService.login(
-                        new LoginRequestDto(
+                        new LoginDto(
                                 username,
                                 "incorrect-password"
                         )
                 );
-
+        final String expectedToken = "";
         assertNotNull(loginResponse);
 
         assertAll(
                 () -> assertFalse(loginResponse.getSuccess()),
-                () -> assertNull(loginResponse.getToken())
+                () -> assertEquals(loginResponse.getToken(),expectedToken)
         );
     }
 
     @Test
     void duplicateUsernameIsRejected() {
-        CreateUserRequestDto request =
-                new CreateUserRequestDto(
+        CreateUserDto request =
+                new CreateUserDto(
                         "testuser",
                         "password123456789",
                         "test@gmail.com"
                 );
 
-        CreateUserResponseDto firstResponse =
+        CreateUserReply firstResponse =
                 authService.createUser(request);
 
-        CreateUserResponseDto duplicateResponse =
+        CreateUserReply duplicateResponse =
                 authService.createUser(request);
 
         assertTrue(firstResponse.getSuccess());
