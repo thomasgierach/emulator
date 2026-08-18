@@ -14,7 +14,7 @@ COPY proto/build.gradle /workspace/proto/
 COPY proto/src /workspace/proto/src
 
 RUN chmod +x ./gradlew
-RUN ./gradlew :auth:build
+RUN ./gradlew :auth:bootJar
 
 FROM eclipse-temurin:25-jre
 WORKDIR /app
