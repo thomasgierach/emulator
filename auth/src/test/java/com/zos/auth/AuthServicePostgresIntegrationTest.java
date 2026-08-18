@@ -104,7 +104,44 @@ class AuthServicePostgresIntegrationTest {
                 () -> assertNotNull(loginResponse.getToken())
         );
     }
+    @Test
+    void loginFailsWithEmptyUsername() {
+        LoginDto request =
+                new LoginDto(
+                        "",
+                        "password123456789"
+                );
 
+        LoginReply response = authService.login(request);
+
+        assertNotNull(response);
+
+        String expectedToken = "";
+
+        assertAll(
+                () -> assertFalse(response.getSuccess()),
+                () -> assertEquals(response.getToken(), expectedToken)
+        );
+    }
+    @Test
+    void loginFailsWithEmptyPassword() {
+        LoginDto request =
+                new LoginDto(
+                        "testuser_loginFailsWithEmptyPassword",
+                        ""
+                );
+
+        LoginReply response = authService.login(request);
+
+        assertNotNull(response);
+
+        String expectedToken = "";
+
+        assertAll(
+                () -> assertFalse(response.getSuccess()),
+                () -> assertEquals(response.getToken(), expectedToken)
+        );
+    }
     @Test
     void loginFailsWithIncorrectPassword() {
         String username = "testuser_loginFailsWithIncorrectPassword";
@@ -138,6 +175,45 @@ class AuthServicePostgresIntegrationTest {
         );
     }
 
+    @Test
+    void createUserFailsWithEmptyUsername() {
+        CreateUserDto request =
+                new CreateUserDto(
+                        "",
+                        "password123456789",
+                        "test@gmail.com"
+                );
+        CreateUserReply response =
+                authService.createUser(request);
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+    }
+    @Test
+    void createUserFailsWithEmptyPassword() {
+        CreateUserDto request =
+                new CreateUserDto(
+                        "testuser",
+                        "",
+                        "test@gmail.com"
+                );
+        CreateUserReply response =
+                authService.createUser(request);
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+    }
+    @Test
+    void createUserFailsWithEmptyEmail() {
+        CreateUserDto request =
+                new CreateUserDto(
+                        "testuser",
+                        "password123456789",
+                        ""
+                );
+        CreateUserReply response =
+                authService.createUser(request);
+        assertNotNull(response);
+        assertFalse(response.getSuccess());
+    }
     @Test
     void duplicateUsernameIsRejected() {
         CreateUserDto request =
