@@ -4,10 +4,10 @@ public class CreateUserRequestDto {
     private String username;
     private String password;
     private String email;
-
+    
     public CreateUserRequestDto() {
     }
-    public CreateUserRequestDto(String username, String password, String email) {
+    public CreateUserRequestDto(String username, String email, String password) {
         this.username = username;
         this.password = password;
         this.email = email;

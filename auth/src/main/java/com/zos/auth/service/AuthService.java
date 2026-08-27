@@ -81,6 +81,14 @@ public class AuthService {
                     .setErrorMessage("Username, password, and email must not be empty")
                     .build();
         }
+        if (dto.getEmail().contains("@") == false) {
+            logger.warn("Attempt to create user with invalid email: {}", dto.getEmail());
+            return CreateUserReply.newBuilder()
+                    .setSuccess(false)
+                    .setUsername(dto.getUsername())
+                    .setErrorMessage("Invalid email address")
+                    .build();
+        }
         Optional<User> existingUser = usersRepository.findByUsername(dto.getUsername());
 
         if (existingUser.isPresent()) {
@@ -99,6 +107,10 @@ public class AuthService {
         logger.info("createUser(): Stored hash: " + storedHash);
         logger.info("createUser(): Stored hash length: " + storedHash.length());
 
+        logger.info(
+            "Hash matches immediately after encoding: {}",
+            passwordEncoder.matches(dto.getPassword(), storedHash)
+        );
         User newUser = new User(
                 dto.getUsername(),
                 dto.getEmail(),

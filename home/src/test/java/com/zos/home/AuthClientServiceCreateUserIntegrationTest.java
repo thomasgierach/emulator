@@ -175,8 +175,8 @@ class AuthClientServiceCreateUserIntegrationTest {
         CreateUserRequestDto request =
                 new CreateUserRequestDto(
                         "testuser",
-                        "password123456789",
-                        "test@email.com"
+                        "test@email.com",
+                        "password123456789"
                 );
 
         CreateUserResponseDto response =
@@ -220,9 +220,9 @@ class AuthClientServiceCreateUserIntegrationTest {
 
         CreateUserRequestDto request =
                 new CreateUserRequestDto(
-                        "testuser",
-                        "password123456789",
-                        "test@email.com"
+                        "testuser", 
+                        "test@email.com",
+                        "password123456789"
                 );
 
         CreateUserResponseDto response =
@@ -255,8 +255,8 @@ class AuthClientServiceCreateUserIntegrationTest {
         CreateUserRequestDto request =
                 new CreateUserRequestDto(
                         "testuser",
-                        "password123456789",
-                        "test@email.com"
+                        "test@email.com",
+                        "password123456789"
                 );
 
         IllegalStateException exception =

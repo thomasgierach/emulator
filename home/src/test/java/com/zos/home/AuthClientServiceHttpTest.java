@@ -65,7 +65,7 @@ public class AuthClientServiceHttpTest {
         String email = "test@gmail.com";
 
         CreateUserRequestDto req =
-                new CreateUserRequestDto(username, password, email);
+                new CreateUserRequestDto(username, email, password);
 
         authServer.stubFor(
                 post(urlEqualTo("/auth/users"))

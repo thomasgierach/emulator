@@ -9,11 +9,14 @@ export const createAccountFunc = async (username, password, email) => {
     );
   }
 
+  //console.log("username:", username, typeof username);
+  //console.log("password:", password, typeof password);
+  //console.log("email:", email, typeof email); 
   try {
     const response = await axios.post(`${createUserUrl}/create-user`, {
       username,
-      password,
-      email
+      email,
+      password
     });
 
     return response.data;

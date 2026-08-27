@@ -18,11 +18,11 @@ function CreateAccount() {
     setError('');
 
     try {
-      await createAccountFunc({
+      await createAccountFunc(
         username,
-        email,
-        password
-      });
+        password,
+        email
+      );
 
       setMessage('User created successfully.');
       setUsername('');

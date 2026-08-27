@@ -6,11 +6,16 @@ import com.zos.auth.proto.CreateUserReply;
 
 import com.zos.home.service.AuthClientService;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class CreateUserController {
+
+    private static final Logger logger =
+            LoggerFactory.getLogger(CreateUserController.class);
 
     private final AuthClientService authClientService;
 
@@ -20,6 +25,7 @@ public class CreateUserController {
 
     @PostMapping("/create-user")
     public ResponseEntity<CreateUserResponseDto> createUser(@RequestBody CreateUserRequestDto request) {
+        logger.info("Received create user request: {}", request);
         CreateUserResponseDto response = authClientService.createUser(request);
 
         if (!response.getSuccess()) {

@@ -31,7 +31,7 @@ public class CreateUserControllerTest {
         String password = "password123456789";
         String email = "test@gmail.com";
 
-        CreateUserRequestDto request = new CreateUserRequestDto(username, password, email);
+        CreateUserRequestDto request = new CreateUserRequestDto(username, email, password);
         CreateUserResponseDto response = new CreateUserResponseDto(true, username, "Create User successful");
 
         when(authClientService.createUser(request))
